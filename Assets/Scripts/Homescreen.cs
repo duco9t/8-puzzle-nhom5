@@ -19,16 +19,16 @@ public class Homescreen : MonoBehaviour
 
     public void PlayGame()
     {
-        SceneManager.LoadSceneAsync(0);
+        SceneManager.LoadSceneAsync(2);
     }
 
     public void Quittohome()
     {
-        SceneManager.LoadSceneAsync(1);
+        SceneManager.LoadSceneAsync(0);
     }
 
     public void Information()
     {
-        SceneManager.LoadSceneAsync(2);
+        SceneManager.LoadSceneAsync(1);
     }
 }
