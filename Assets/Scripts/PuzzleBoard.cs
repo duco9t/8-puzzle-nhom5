@@ -1,4 +1,4 @@
-using PathFinding;
+﻿using PathFinding;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -56,7 +56,7 @@ public class PuzzleBoard : MonoBehaviour
         SetTexture();
         SetPuzzleState(new PuzzleState());
 
-        statusText.text = "Puzzle in solved state. Randomize to play!";
+        statusText.text = "Câu đố đã được giải quyết. Chọn xáo trộn để chơi!";
         numberOfMoves = 0;
         solved = true;
 
@@ -156,9 +156,9 @@ public class PuzzleBoard : MonoBehaviour
                         if (solved)
                         {
                             statusText.gameObject.SetActive(true);
-                            statusText.text = "Yay! " +
-                                "You win puzzle. " +
-                                "Click Next to play a new puzzle";
+                            statusText.text = "Tuyệt vời! " +
+                                "Bạn thắng xếp hình. " +
+                                "Nhấp vào xáo trộn để chơi xếp hình mới";
                         }
                     }
                 }
@@ -282,7 +282,7 @@ public class PuzzleBoard : MonoBehaviour
     IEnumerator Coroutine_Solve()
     {
         statusText.gameObject.SetActive(true);
-        statusText.text = "Finding solution using A* search.";
+        statusText.text = "Tìm giải pháp bằng cách sử dụng tìm kiếm A*.";
         pathFinder.Initialise(new PuzzleNode(new PuzzleState(randomizedState)),
             new PuzzleNode(new PuzzleState()));
 
@@ -314,8 +314,8 @@ public class PuzzleBoard : MonoBehaviour
             node = node.Parent;
         }
 
-        statusText.text = "Solution found! The puzzle can be solved in " +
-            (reverseSolution.Count - 1).ToString() + " moves.";
+        statusText.text = "Đã tìm ra giải pháp! Hình này có thể được giải quyết trong " +
+            (reverseSolution.Count - 1).ToString() + " bước.";
 
         if (reverseSolution.Count > 0)
         {
@@ -333,7 +333,7 @@ public class PuzzleBoard : MonoBehaviour
                 yield return new WaitForSeconds(1.0f);
             }
         }
-        statusText.text = "Puzzle in solved state. Randomize to play!";
+        statusText.text = "Câu đố đã được giải quyết. Chọn ngẫu nhiên để chơi!";
         solvingUsingAStarInProgress = false;
     }
 
