@@ -11,13 +11,13 @@ public class PuzzleBoard : MonoBehaviour
 
     public Text statusText;
     public Text numberOfMovesText;
+    public Text timeText;
 
     private bool solved = false;
     private PuzzleState goalState = new PuzzleState();
     private PuzzleState randomizedState;
 
     private int numberOfMoves = 0;
-
 
     private int currentTextureIndex = 0;
 
@@ -43,6 +43,11 @@ public class PuzzleBoard : MonoBehaviour
     private bool solvingUsingAStarInProgress = false;
     private int numberOfMovesAStar = 0;
 
+    private float userStartTime;
+    private float aStarStartTime;
+    private bool isUserTiming = false;
+    private bool isAStarTiming = false;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -61,6 +66,7 @@ public class PuzzleBoard : MonoBehaviour
         solved = true;
 
         numberOfMovesText.gameObject.SetActive(false);
+        timeText.gameObject.SetActive(false);
     }
 
     void CreateTiles()
@@ -91,10 +97,10 @@ public class PuzzleBoard : MonoBehaviour
             int row = i / numRows;
             int col = i % numRows;
 
-            float xMin = col * 
+            float xMin = col *
                 (float)tileSize / mainTexture.width;
 
-            float yMin = 1.0f - (row + 1) * 
+            float yMin = 1.0f - (row + 1) *
                 (float)tileSize / mainTexture.height;
 
             material.mainTexture = mainTexture;
@@ -107,7 +113,7 @@ public class PuzzleBoard : MonoBehaviour
 
         // We want the last tile to be empty and hence
         // transparent in color.
-        tiles[8].GetComponent<Renderer>().material.color = 
+        tiles[8].GetComponent<Renderer>().material.color =
             new Color(0.0f, 0.0f, 0.0f, 0.0f);
     }
 
@@ -136,13 +142,20 @@ public class PuzzleBoard : MonoBehaviour
             GameObject obj = PickTile();
             if (obj != null && !solved)
             {
+                if (!isUserTiming)
+                {
+                    isUserTiming = true;
+                    userStartTime = Time.time;
+                    timeText.gameObject.SetActive(true);
+                }
+
                 int empty = currentState.EmptyTileIndex;
-                List<int> neighbours = 
+                List<int> neighbours =
                     PuzzleState.GetNeighbourIndices(empty);
 
                 for (int i = 0; i < neighbours.Count; i++)
                 {
-                    if (obj.name == 
+                    if (obj.name ==
                         currentState.Arr[neighbours[i]].ToString())
                     {
                         numberOfMoves++;
@@ -159,6 +172,7 @@ public class PuzzleBoard : MonoBehaviour
                             statusText.text = "Tuyệt vời! " +
                                 "Bạn thắng xếp hình. " +
                                 "Nhấp vào xáo trộn để chơi xếp hình mới";
+                            isUserTiming = false; // Stop user timing when solved
                         }
                     }
                 }
@@ -168,6 +182,18 @@ public class PuzzleBoard : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.R))
         {
             StartCoroutine(Coroutine_Randomize(100, 0.02f));
+        }
+
+        if (isUserTiming)
+        {
+            float userElapsedTime = Time.time - userStartTime;
+            timeText.text = "Thời gian: " + userElapsedTime.ToString("F2") + " giây";
+        }
+
+        if (isAStarTiming)
+        {
+            float aStarElapsedTime = Time.time - aStarStartTime;
+            timeText.text = "Thời gian: " + aStarElapsedTime.ToString("F2") + " giây";
         }
     }
 
@@ -217,7 +243,7 @@ public class PuzzleBoard : MonoBehaviour
 
         while (elaspedTime < seconds)
         {
-            objectToMove.transform.position = 
+            objectToMove.transform.position =
                 Vector3.Lerp(
                     startingPos, end,
                     elaspedTime / seconds);
@@ -228,14 +254,14 @@ public class PuzzleBoard : MonoBehaviour
         objectToMove.transform.position = end;
     }
 
-    IEnumerator Coroutine_Randomize(int depth, 
+    IEnumerator Coroutine_Randomize(int depth,
         float durationPerMove)
     {
         randomizing = true;
         int i = 0;
         while (i < depth)
         {
-            List<PuzzleState> neighbours = 
+            List<PuzzleState> neighbours =
                 PuzzleState.GetNeighbourOfEmpty(currentState);
 
             // get a random index.
@@ -279,12 +305,26 @@ public class PuzzleBoard : MonoBehaviour
         return 1.0f;
     }
 
+    bool IsShuffled(PuzzleState initialState, PuzzleState goalState)
+    {
+        return initialState != null && !initialState.Equals(goalState);
+    }
+
     IEnumerator Coroutine_Solve()
     {
-        statusText.gameObject.SetActive(true);
-        statusText.text = "Tìm giải pháp bằng cách sử dụng tìm kiếm A*.";
-        pathFinder.Initialise(new PuzzleNode(new PuzzleState(randomizedState)),
-            new PuzzleNode(new PuzzleState()));
+        solvingUsingAStarInProgress = true; // Bắt đầu giải bằng A*
+
+        // Nếu trạng thái hiện tại đã là trạng thái mục tiêu, không cần giải
+        if (!IsShuffled(currentState, goalState))
+        {
+            Debug.Log("Initial state is already the goal state or shuffle not pressed.");
+            solvingUsingAStarInProgress = false;
+            yield break;
+        }
+
+        aStarStartTime = Time.time; // Bắt đầu tính thời gian giải A*
+        isAStarTiming = true;
+        pathFinder.Initialise(new PuzzleNode(currentState), new PuzzleNode(goalState));
 
         while (pathFinder.Status == PathFinderStatus.RUNNING)
         {
@@ -294,14 +334,21 @@ public class PuzzleBoard : MonoBehaviour
 
         if (pathFinder.Status == PathFinderStatus.SUCCESS)
         {
-            // We will show the solution.
+            isAStarTiming = false; // Dừng tính thời gian giải A*
+            float aStarElapsedTime = Time.time - aStarStartTime;
+            timeText.text = "Thời gian A*: " + aStarElapsedTime.ToString("F2") + " giây";
+
+            // Hiển thị giải pháp
             StartCoroutine(Coroutine_ShowSolution());
         }
-        if (pathFinder.Status != PathFinderStatus.FAILURE)
+        else
         {
             Debug.Log("No solution found!");
         }
+
+        solvingUsingAStarInProgress = false; // Kết thúc quá trình giải A*
     }
+
 
     IEnumerator Coroutine_ShowSolution()
     {
@@ -333,13 +380,30 @@ public class PuzzleBoard : MonoBehaviour
                 yield return new WaitForSeconds(1.0f);
             }
         }
+
+        // Sau khi hiển thị giải pháp, kiểm tra xem người dùng có đang giải mê cung không
+        // Nếu không, ẩn thời gian điều chỉnh của người dùng
+        if (!isUserTiming)
+        {
+            timeText.gameObject.SetActive(false);
+        }
+
         statusText.text = "Câu đố đã được giải quyết. Chọn ngẫu nhiên để chơi!";
-        solvingUsingAStarInProgress = false;
     }
+
 
     public void Solve()
     {
         if (solvingUsingAStarInProgress) return;
+
+        if (!IsShuffled(randomizedState, goalState))
+        {
+            statusText.gameObject.SetActive(true);
+            statusText.text = "Hãy nhấn nút xáo trộn trước khi giải.";
+            Debug.Log("Initial state is already the goal state or shuffle not pressed.");
+            return;
+        }
+
         numberOfMovesAStar = 0;
         solvingUsingAStarInProgress = true;
 
